@@ -74,6 +74,12 @@ a{ color: inherit; }
   color: var(--bone);
   letter-spacing: 0.01em;
 }
+.loader-sub{
+  margin: -8px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
 .loader-bar{
   width: min(220px, 60vw);
   height: 1px;
@@ -577,11 +583,26 @@ body.ready .scroll-cue{ opacity: 1; }
   }
 
   .bubble--work{
-    width: min(96vw, 560px);
-    padding: 14px 12px 12px;
-    max-height: calc(100dvh - 88px);
+    width: min(94vw, 520px);
+    padding: 12px 10px 12px;
+    max-height: min(68dvh, calc(100dvh - 160px));
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scrollbar-width: thin; /* Firefox — show scrollbar on this slide only */
+    scrollbar-color: rgba(237,232,222,0.35) transparent;
+  }
+  .bubble--work::-webkit-scrollbar{
+    display: block;
+    width: 5px;
+  }
+  .bubble--work::-webkit-scrollbar-track{
+    background: transparent;
+  }
+  .bubble--work::-webkit-scrollbar-thumb{
+    background: rgba(237,232,222,0.35);
+    border-radius: 4px;
   }
   .bubble--work h2{
     margin: 0 0 10px;
@@ -639,7 +660,8 @@ body.ready .scroll-cue{ opacity: 1; }
     letter-spacing: 0.01em;
   }
   .bubble--work{
-    padding: 12px 10px 10px;
+    padding: 10px 8px 10px;
+    max-height: min(64dvh, calc(100dvh - 150px));
   }
 }
 

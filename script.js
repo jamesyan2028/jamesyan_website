@@ -5,10 +5,20 @@
      Config
   --------------------------------------------------------- */
   var FRAME_COUNT = 933;
-  var PX_PER_FRAME = 16; // scroll distance (px) allotted to each frame — tune for scrub feel
+  var PX_PER_FRAME_DESKTOP = 16; // scroll distance (px) per frame on desktop
+  var PX_PER_FRAME_MOBILE = 7;   // lower = faster scrub through the video
+  var PX_PER_FRAME = PX_PER_FRAME_DESKTOP;
   var FRAME_PATH = function (i) {
     return "frames/frame_" + String(i).padStart(3, "0") + ".webp";
   };
+
+  function isMobileLayout() {
+    return window.matchMedia("(max-width: 720px), (pointer: coarse)").matches;
+  }
+
+  function updateScrollSpeed() {
+    PX_PER_FRAME = isMobileLayout() ? PX_PER_FRAME_MOBILE : PX_PER_FRAME_DESKTOP;
+  }
 
   // Where each bubble lives along total scroll progress (0..1).
   // start -> fadeIn -> (held at full opacity) -> fadeOut -> end
@@ -49,6 +59,7 @@
   }
 
   function sizeSpacer() {
+    updateScrollSpeed();
     var scrubDistance = (FRAME_COUNT - 1) * PX_PER_FRAME;
     spacer.style.height = (scrubDistance + window.innerHeight) + "px";
   }
