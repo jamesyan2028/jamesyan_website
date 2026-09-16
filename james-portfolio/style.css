@@ -180,17 +180,17 @@ body.ready .scroll-cue{ opacity: 1; }
   opacity: 0 !important;
   transition: opacity 0.35s ease !important;
 }
-.scroll-cue i{
+.scroll-cue-arrow{
   display: block;
-  width: 1px;
-  height: 26px;
-  background: linear-gradient(180deg, var(--dim), transparent);
+  width: 18px;
+  height: 18px;
+  color: var(--dim);
   animation: cue-move 1.8s ease-in-out infinite;
 }
 @keyframes cue-move{
-  0%{ transform: scaleY(0.4); opacity: 0.4; }
-  50%{ transform: scaleY(1); opacity: 1; }
-  100%{ transform: scaleY(0.4); opacity: 0.4; }
+  0%{ transform: translateY(0); opacity: 0.45; }
+  50%{ transform: translateY(6px); opacity: 1; }
+  100%{ transform: translateY(0); opacity: 0.45; }
 }
 
 /* ---------------------------------------------------------
@@ -517,6 +517,6 @@ body.ready .scroll-cue{ opacity: 1; }
    Reduced motion
 --------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce){
-  .scroll-cue i{ animation: none; }
+  .scroll-cue-arrow{ animation: none; }
   .bubble{ transition: none !important; }
 }

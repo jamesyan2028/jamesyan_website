@@ -13,9 +13,9 @@
   // Where each bubble lives along total scroll progress (0..1).
   // start -> fadeIn -> (held at full opacity) -> fadeOut -> end
   var BUBBLES_CONFIG = [
-    { key: "intro", start: 0.0, fadeIn: 0.0, fadeOut: 0.15, end: 0.2 },
-    { key: "work", start: 0.4, fadeIn: 0.47, fadeOut: 0.63, end: 0.7 },
-    { key: "contact", start: 0.86, fadeIn: 0.93, fadeOut: 1.01, end: 1.02 }
+    { key: "intro", start: 0.0, fadeIn: 0.0, fadeOut: 0.02, end: 0.07 },
+    { key: "work", start: 0.4, fadeIn: 0.45, fadeOut: 0.62, end: 0.70 },
+    { key: "contact", start: 0.86, fadeIn: 0.92, fadeOut: 1.05, end: 1.08 }
   ];
 
   /* ---------------------------------------------------------
