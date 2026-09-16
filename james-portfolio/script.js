@@ -5,7 +5,7 @@
      Config
   --------------------------------------------------------- */
   var FRAME_COUNT = 933;
-  var PX_PER_FRAME = 4; // scroll distance (px) allotted to each frame — tune for scrub feel
+  var PX_PER_FRAME = 16; // scroll distance (px) allotted to each frame — tune for scrub feel
   var FRAME_PATH = function (i) {
     return "frames/frame_" + String(i).padStart(3, "0") + ".webp";
   };

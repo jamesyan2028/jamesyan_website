@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" role="img" aria-label="Brown University">
+  <!-- Two-color Brown arms: argent shield, gules cross, four open books -->
+  <path d="M50 4 L92 16 V52 C92 78 68 100 50 112 C32 100 8 78 8 52 V16 Z" fill="#C00404"/>
+  <path d="M50 10 L86 20 V51 C86 74 66 94 50 104 C34 94 14 74 14 51 V20 Z" fill="#FFFFFF"/>
+  <!-- Cross -->
+  <rect x="44" y="24" width="12" height="58" fill="#C00404"/>
+  <rect x="22" y="47" width="56" height="12" fill="#C00404"/>
+  <!-- Books: TL TR BL BR -->
+  <g fill="#FFFFFF" stroke="#C00404" stroke-width="1.2" stroke-linejoin="round">
+    <path d="M20 26h10l4 3 4-3h10v12H20z"/>
+    <path d="M34 26.5v11" fill="none"/>
+    <path d="M52 26h10l4 3 4-3h10v12H52z"/>
+    <path d="M66 26.5v11" fill="none"/>
+    <path d="M20 64h10l4 3 4-3h10v12H20z"/>
+    <path d="M34 64.5v11" fill="none"/>
+    <path d="M52 64h10l4 3 4-3h10v12H52z"/>
+    <path d="M66 64.5v11" fill="none"/>
+  </g>
+</svg>
