@@ -28,7 +28,7 @@
   var loaderFill = document.getElementById("loaderFill");
   var loaderPct = document.getElementById("loaderPct");
   var scrollCue = document.getElementById("scrollCue");
-  var dots = Array.prototype.slice.call(document.querySelectorAll(".dot"));
+  var navItems = Array.prototype.slice.call(document.querySelectorAll(".nav-item"));
 
   var bubbles = BUBBLES_CONFIG.map(function (cfg) {
     return Object.assign({}, cfg, {
@@ -50,7 +50,7 @@
 
   function sizeSpacer() {
     var scrubDistance = (FRAME_COUNT - 1) * PX_PER_FRAME;
-    spacer.style.height = "calc(" + scrubDistance + "px + 100vh)";
+    spacer.style.height = (scrubDistance + window.innerHeight) + "px";
   }
 
   sizeCanvas();
@@ -164,8 +164,8 @@
       if (opacity > 0.5) activeIndex = i;
     });
 
-    dots.forEach(function (dot, i) {
-      dot.classList.toggle("active", i === activeIndex);
+    navItems.forEach(function (item, i) {
+      item.classList.toggle("active", i === activeIndex);
     });
   }
 
@@ -183,10 +183,10 @@
   }
 
   /* ---------------------------------------------------------
-     Nav dots — click to jump to a section
+     Nav — click to jump to a section
   --------------------------------------------------------- */
-  dots.forEach(function (dot, i) {
-    dot.addEventListener("click", function () {
+  navItems.forEach(function (item, i) {
+    item.addEventListener("click", function () {
       var cfg = BUBBLES_CONFIG[i];
       if (!cfg) return;
       var mid = (cfg.fadeIn + cfg.fadeOut) / 2;

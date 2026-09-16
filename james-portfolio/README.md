@@ -1,34 +1,3 @@
-# James Yan — Portfolio
-
-A single-page portfolio in the style of pear.no: a full-screen scroll-scrubbed
-video background (built from your `frames_intro` sequence) with three glass
-text panels that fade in and out as you scroll — intro, experience/projects,
-and contact.
-
-## Files
-
-```
-index.html      structure + copy (edit your name, bio, experience, links here)
-style.css       all styling (colors, type, layout — tokens at the top)
-script.js       preloads the frames and drives the scroll-scrub + fades
-frames/         234 .webp frames extracted from your video
-```
-
-## Before you publish — replace the placeholders
-
-Open `index.html` and swap out:
-
-- **Email address** — `james.yan2028@gmail.com`
-- **GitHub / LinkedIn URLs** — currently `yourusername`
-- **Résumé** — the link points to `resume.pdf`; drop your actual résumé PDF
-  into this folder with that name, or update the `href`
-- **Experience & Projects** — everything in `[brackets]` in the "Selected
-  work" section is a placeholder (company names, roles, research focus,
-  project names/descriptions). Replace with your real history; keep each
-  description to one or two lines so it stays legible over the video.
-- **Wordmark / footnote** — "James Yan" appears in the header and
-  footer; update if you go by something else.
-
 ## Running it locally
 
 Because the page loads 234 separate image files, opening `index.html`
