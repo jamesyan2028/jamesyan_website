@@ -4,13 +4,60 @@
   /* ---------------------------------------------------------
      Config
   --------------------------------------------------------- */
-  var FRAME_COUNT = 933;
-  var PX_PER_FRAME_DESKTOP = 16; // scroll distance (px) per frame on desktop
-  var PX_PER_FRAME_MOBILE = 7;   // lower = faster scrub through the video
+  var HIGH_FRAME_COUNT = 600; // experiment: testframes (was 933 in frames/)
+  var PX_PER_FRAME_DESKTOP = 24; // +50% vs prior 16 — fewer frames, longer scrub
+  var PX_PER_FRAME_MOBILE = 11;  // +50% vs prior 7
   var PX_PER_FRAME = PX_PER_FRAME_DESKTOP;
-  var FRAME_PATH = function (i) {
-    return "frames/frame_" + String(i).padStart(3, "0") + ".webp";
-  };
+  var FRAME_COUNT = HIGH_FRAME_COUNT;
+  var VIDEO_TIMEOUT_MS = 10000; // if video isn't ready by then, show static and keep loading
+  var mode = "high"; // "high" | "static"
+  var STATIC_PATHS = [
+    "image1final.png"
+  ];
+
+  function framePath(i) {
+    return "testframes/frame_" + String(i).padStart(3, "0") + ".webp";
+  }
+
+  /*
+    Connection strategy:
+    - Extremely fast / 5G-class → try video; if not ready in 10s, fall back to static and stop
+    - 4G or slower → static image only (no video download)
+    Note: browsers usually report 5G as effectiveType "4g"; we use downlink >= 10 Mbps as 5G-class.
+  */
+  function getConnectionHint() {
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!conn) return null;
+
+    if (conn.saveData) return "static";
+    if (conn.effectiveType === "5g") return "video";
+    if (conn.effectiveType === "4g" && conn.downlink >= 10) return "video";
+    if (conn.effectiveType === "4g") return "static";
+    if (conn.effectiveType) return "static"; // 3g, 2g, slow-2g
+    return null;
+  }
+
+  function measureSpeed() {
+    var start = performance.now();
+    return fetch("favicon.png", { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("probe failed");
+        return res.blob();
+      })
+      .then(function () {
+        var ms = performance.now() - start;
+        return ms < 100 ? "video" : "static";
+      })
+      .catch(function () {
+        return "static";
+      });
+  }
+
+  function decideMode() {
+    var hint = getConnectionHint();
+    if (hint) return Promise.resolve(hint);
+    return measureSpeed();
+  }
 
   function isMobileLayout() {
     return window.matchMedia("(max-width: 720px), (pointer: coarse)").matches;
@@ -28,6 +75,22 @@
     { key: "contact", start: 0.86, fadeIn: 0.92, fadeOut: 1.05, end: 1.08 }
   ];
 
+  function bubbleOpacity(cfg, p) {
+    var opacity = 0;
+    if (p < cfg.start) {
+      opacity = 0;
+    } else if (p < cfg.fadeIn) {
+      opacity = (p - cfg.start) / (cfg.fadeIn - cfg.start || 1);
+    } else if (p < cfg.fadeOut) {
+      opacity = 1;
+    } else if (p < cfg.end) {
+      opacity = 1 - (p - cfg.fadeOut) / (cfg.end - cfg.fadeOut || 1);
+    } else {
+      opacity = 0;
+    }
+    return Math.max(0, Math.min(1, opacity));
+  }
+
   /* ---------------------------------------------------------
      Elements
   --------------------------------------------------------- */
@@ -42,7 +105,7 @@
 
   var bubbles = BUBBLES_CONFIG.map(function (cfg) {
     return Object.assign({}, cfg, {
-      el: document.querySelector('.bubble--' + cfg.key)
+      el: document.querySelector(".bubble--" + cfg.key)
     });
   });
 
@@ -60,7 +123,8 @@
 
   function sizeSpacer() {
     updateScrollSpeed();
-    var scrubDistance = (FRAME_COUNT - 1) * PX_PER_FRAME;
+    // Always use high-res scrub length so section timing stays consistent
+    var scrubDistance = (HIGH_FRAME_COUNT - 1) * PX_PER_FRAME;
     spacer.style.height = (scrubDistance + window.innerHeight) + "px";
   }
 
@@ -68,16 +132,18 @@
   sizeSpacer();
 
   /* ---------------------------------------------------------
-     Preload frames
+     Preload / draw
   --------------------------------------------------------- */
-  var images = new Array(FRAME_COUNT);
+  var images = [];
+  var staticImages = [];
+  var loadTotal = 0;
   var loadedCount = 0;
   var ready = false;
+  var upgrading = false;
+  var videoAbandoned = false;
 
-  function drawFrame(idx) {
-    idx = Math.max(0, Math.min(FRAME_COUNT - 1, idx));
-    var img = images[idx];
-    if (!img || !img.complete || !img.naturalWidth) return;
+  function drawCoverImage(img, alpha) {
+    if (!img || !img.complete || !img.naturalWidth || alpha <= 0) return;
 
     var cw = canvas.width;
     var ch = canvas.height;
@@ -89,35 +155,136 @@
     var dx = (cw - dw) / 2;
     var dy = (ch - dh) / 2;
 
-    ctx.clearRect(0, 0, cw, ch);
+    ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
   }
 
-  function onFrameSettled() {
+  function drawVideoFrame(idx) {
+    idx = Math.max(0, Math.min(FRAME_COUNT - 1, idx));
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCoverImage(images[idx], 1);
+  }
+
+  function drawStaticBackground() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCoverImage(staticImages[0], 1);
+  }
+
+  function onAssetSettled() {
     loadedCount++;
-    var pct = Math.round((loadedCount / FRAME_COUNT) * 100);
-    loaderFill.style.width = pct + "%";
-    loaderPct.textContent = pct;
-    if (loadedCount >= FRAME_COUNT) {
+    var pct = Math.round((loadedCount / loadTotal) * 100);
+    if (loaderFill) loaderFill.style.width = pct + "%";
+    if (loaderPct) loaderPct.textContent = String(pct);
+    if (loadedCount >= loadTotal) {
       finishLoading();
     }
   }
 
-  function preload() {
-    for (var i = 0; i < FRAME_COUNT; i++) {
+  function preloadList(paths, targetArray, onDone) {
+    loadTotal = paths.length;
+    loadedCount = 0;
+    var settledHandler = onDone || onAssetSettled;
+    for (var i = 0; i < paths.length; i++) {
       var img = new Image();
       img.decoding = "async";
-      img.onload = onFrameSettled;
-      img.onerror = onFrameSettled;
-      img.src = FRAME_PATH(i + 1);
-      images[i] = img;
+      img.onload = settledHandler;
+      img.onerror = settledHandler;
+      img.src = paths[i];
+      targetArray[i] = img;
     }
+  }
+
+  function buildFramePaths() {
+    var paths = [];
+    for (var i = 1; i <= HIGH_FRAME_COUNT; i++) {
+      paths.push(framePath(i));
+    }
+    return paths;
+  }
+
+  function ensureStaticImage(cb) {
+    if (staticImages[0] && staticImages[0].complete && staticImages[0].naturalWidth) {
+      cb();
+      return;
+    }
+    var img = new Image();
+    img.decoding = "async";
+    img.onload = function () {
+      staticImages[0] = img;
+      cb();
+    };
+    img.onerror = function () {
+      staticImages[0] = img;
+      cb();
+    };
+    img.src = STATIC_PATHS[0];
+    staticImages[0] = img;
+  }
+
+  function fallBackToStatic() {
+    if (ready) return;
+    mode = "static";
+    videoAbandoned = true;
+    upgrading = false;
+    // Drop in-flight video requests so we stop burning bandwidth
+    for (var i = 0; i < images.length; i++) {
+      if (images[i]) {
+        images[i].onload = null;
+        images[i].onerror = null;
+        images[i].src = "";
+      }
+    }
+    images = [];
+    ensureStaticImage(function () {
+      finishLoading();
+    });
+  }
+
+  /* Extremely fast only: try video; if it takes > 10s, give up and stay on static */
+  function startVideoFirst() {
+    mode = "high";
+    FRAME_COUNT = HIGH_FRAME_COUNT;
+    images = new Array(HIGH_FRAME_COUNT);
+    videoAbandoned = false;
+    upgrading = true;
+
+    var timer = setTimeout(function () {
+      if (ready) return;
+      fallBackToStatic();
+    }, VIDEO_TIMEOUT_MS);
+
+    preloadList(buildFramePaths(), images, function () {
+      loadedCount++;
+      if (videoAbandoned) return;
+
+      var pct = Math.round((loadedCount / HIGH_FRAME_COUNT) * 100);
+      if (loaderFill) loaderFill.style.width = pct + "%";
+      if (loaderPct) loaderPct.textContent = String(pct);
+
+      if (loadedCount < HIGH_FRAME_COUNT) return;
+
+      clearTimeout(timer);
+      upgrading = false;
+
+      if (!ready) {
+        mode = "high";
+        finishLoading();
+      }
+    });
+  }
+
+  /* Not extremely fast: static image only — do not load video */
+  function startStaticFirst() {
+    mode = "static";
+    staticImages = new Array(STATIC_PATHS.length);
+    preloadList(STATIC_PATHS, staticImages);
   }
 
   function finishLoading() {
     if (ready) return;
     ready = true;
-    drawFrame(0);
     document.body.classList.add("ready");
     loader.classList.add("loader--done");
     setTimeout(function () {
@@ -151,19 +318,7 @@
     var activeIndex = -1;
 
     bubbles.forEach(function (b, i) {
-      var opacity = 0;
-      if (p < b.start) {
-        opacity = 0;
-      } else if (p < b.fadeIn) {
-        opacity = (p - b.start) / (b.fadeIn - b.start);
-      } else if (p < b.fadeOut) {
-        opacity = 1;
-      } else if (p < b.end) {
-        opacity = 1 - (p - b.fadeOut) / (b.end - b.fadeOut);
-      } else {
-        opacity = 0;
-      }
-      opacity = Math.max(0, Math.min(1, opacity));
+      var opacity = bubbleOpacity(b, p);
 
       if (b.el) {
         b.el.style.opacity = opacity.toFixed(3);
@@ -182,8 +337,14 @@
 
   function update() {
     var p = getProgress();
-    var frameIdx = Math.round(p * (FRAME_COUNT - 1));
-    drawFrame(frameIdx);
+
+    if (mode === "static") {
+      drawStaticBackground();
+    } else {
+      var frameIdx = Math.round(p * (FRAME_COUNT - 1));
+      drawVideoFrame(frameIdx);
+    }
+
     updateBubbles(p);
 
     if (scrollCue) {
@@ -221,5 +382,12 @@
     }, 120);
   });
 
-  preload();
+  decideMode().then(function (chosen) {
+    sizeSpacer();
+    if (chosen === "video") {
+      startVideoFirst();
+    } else {
+      startStaticFirst();
+    }
+  });
 })();
