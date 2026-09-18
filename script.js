@@ -9,7 +9,7 @@
   var PX_PER_FRAME_MOBILE = 11;  // +50% vs prior 7
   var PX_PER_FRAME = PX_PER_FRAME_DESKTOP;
   var FRAME_COUNT = HIGH_FRAME_COUNT;
-  var VIDEO_TIMEOUT_MS = 10000; // if video isn't ready by then, show static and keep loading
+  var VIDEO_TIMEOUT_MS = 6000; // if video isn't ready by then, show static image
   var mode = "high"; // "high" | "static"
   var STATIC_PATHS = [
     "image1final.png"
@@ -19,52 +19,14 @@
     return "testframes/frame_" + String(i).padStart(3, "0") + ".webp";
   }
 
-  /*
-    Connection strategy:
-    - Extremely fast / 5G-class → try video; if not ready in 10s, fall back to static and stop
-    - 4G or slower → static image only (no video download)
-    Note: browsers usually report 5G as effectiveType "4g"; we use downlink >= 10 Mbps as 5G-class.
-  */
-  function getConnectionHint() {
-    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (!conn) return null;
-
-    if (conn.saveData) return "static";
-    if (conn.effectiveType === "5g") return "video";
-    if (conn.effectiveType === "4g" && conn.downlink >= 10) return "video";
-    if (conn.effectiveType === "4g") return "static";
-    if (conn.effectiveType) return "static"; // 3g, 2g, slow-2g
-    return null;
-  }
-
-  function measureSpeed() {
-    var start = performance.now();
-    return fetch("favicon.png", { cache: "no-store" })
-      .then(function (res) {
-        if (!res.ok) throw new Error("probe failed");
-        return res.blob();
-      })
-      .then(function () {
-        var ms = performance.now() - start;
-        return ms < 100 ? "video" : "static";
-      })
-      .catch(function () {
-        return "static";
-      });
-  }
-
-  function decideMode() {
-    var hint = getConnectionHint();
-    if (hint) return Promise.resolve(hint);
-    return measureSpeed();
-  }
-
   function isMobileLayout() {
     return window.matchMedia("(max-width: 720px), (pointer: coarse)").matches;
   }
 
   function updateScrollSpeed() {
-    PX_PER_FRAME = isMobileLayout() ? PX_PER_FRAME_MOBILE : PX_PER_FRAME_DESKTOP;
+    var base = isMobileLayout() ? PX_PER_FRAME_MOBILE : PX_PER_FRAME_DESKTOP;
+    // Static mode: 75% of video scrub length (was 50%; +50% more time on page)
+    PX_PER_FRAME = mode === "static" ? base * 0.75 : base;
   }
 
   // Where each bubble lives along total scroll progress (0..1).
@@ -136,10 +98,8 @@
   --------------------------------------------------------- */
   var images = [];
   var staticImages = [];
-  var loadTotal = 0;
   var loadedCount = 0;
   var ready = false;
-  var upgrading = false;
   var videoAbandoned = false;
 
   function drawCoverImage(img, alpha) {
@@ -172,30 +132,6 @@
     drawCoverImage(staticImages[0], 1);
   }
 
-  function onAssetSettled() {
-    loadedCount++;
-    var pct = Math.round((loadedCount / loadTotal) * 100);
-    if (loaderFill) loaderFill.style.width = pct + "%";
-    if (loaderPct) loaderPct.textContent = String(pct);
-    if (loadedCount >= loadTotal) {
-      finishLoading();
-    }
-  }
-
-  function preloadList(paths, targetArray, onDone) {
-    loadTotal = paths.length;
-    loadedCount = 0;
-    var settledHandler = onDone || onAssetSettled;
-    for (var i = 0; i < paths.length; i++) {
-      var img = new Image();
-      img.decoding = "async";
-      img.onload = settledHandler;
-      img.onerror = settledHandler;
-      img.src = paths[i];
-      targetArray[i] = img;
-    }
-  }
-
   function buildFramePaths() {
     var paths = [];
     for (var i = 1; i <= HIGH_FRAME_COUNT; i++) {
@@ -204,31 +140,22 @@
     return paths;
   }
 
-  function ensureStaticImage(cb) {
-    if (staticImages[0] && staticImages[0].complete && staticImages[0].naturalWidth) {
-      cb();
-      return;
-    }
+  function startStaticImageLoad() {
+    staticImages = [null];
     var img = new Image();
     img.decoding = "async";
     img.onload = function () {
       staticImages[0] = img;
-      cb();
     };
     img.onerror = function () {
       staticImages[0] = img;
-      cb();
     };
     img.src = STATIC_PATHS[0];
     staticImages[0] = img;
   }
 
-  function fallBackToStatic() {
-    if (ready) return;
-    mode = "static";
+  function abandonVideoDownloads() {
     videoAbandoned = true;
-    upgrading = false;
-    // Drop in-flight video requests so we stop burning bandwidth
     for (var i = 0; i < images.length; i++) {
       if (images[i]) {
         images[i].onload = null;
@@ -237,49 +164,75 @@
       }
     }
     images = [];
-    ensureStaticImage(function () {
-      finishLoading();
-    });
   }
 
-  /* Extremely fast only: try video; if it takes > 10s, give up and stay on static */
-  function startVideoFirst() {
+  function fallBackToStatic() {
+    if (ready) return;
+    mode = "static";
+    abandonVideoDownloads();
+    sizeSpacer(); // shorter page — faster scroll through sections
+
+    function show() {
+      if (ready) return;
+      finishLoading();
+    }
+
+    if (staticImages[0] && staticImages[0].complete) {
+      show();
+    } else {
+      var img = staticImages[0] || new Image();
+      img.onload = show;
+      img.onerror = show;
+      if (!img.src) {
+        img.src = STATIC_PATHS[0];
+        staticImages[0] = img;
+      }
+    }
+  }
+
+  /*
+    Always load the static image and video frames together.
+    - If all frames finish within 8s → show video scrub
+    - Otherwise → show the static image and cancel remaining video downloads
+  */
+  function startParallelLoad() {
+    startStaticImageLoad();
+
     mode = "high";
     FRAME_COUNT = HIGH_FRAME_COUNT;
     images = new Array(HIGH_FRAME_COUNT);
+    loadedCount = 0;
     videoAbandoned = false;
-    upgrading = true;
 
     var timer = setTimeout(function () {
       if (ready) return;
       fallBackToStatic();
     }, VIDEO_TIMEOUT_MS);
 
-    preloadList(buildFramePaths(), images, function () {
-      loadedCount++;
-      if (videoAbandoned) return;
+    var paths = buildFramePaths();
+    for (var i = 0; i < paths.length; i++) {
+      (function (idx) {
+        var img = new Image();
+        img.decoding = "async";
+        function settled() {
+          if (videoAbandoned || ready) return;
+          loadedCount++;
+          var pct = Math.round((loadedCount / HIGH_FRAME_COUNT) * 100);
+          if (loaderFill) loaderFill.style.width = pct + "%";
+          if (loaderPct) loaderPct.textContent = String(pct);
 
-      var pct = Math.round((loadedCount / HIGH_FRAME_COUNT) * 100);
-      if (loaderFill) loaderFill.style.width = pct + "%";
-      if (loaderPct) loaderPct.textContent = String(pct);
+          if (loadedCount < HIGH_FRAME_COUNT) return;
 
-      if (loadedCount < HIGH_FRAME_COUNT) return;
-
-      clearTimeout(timer);
-      upgrading = false;
-
-      if (!ready) {
-        mode = "high";
-        finishLoading();
-      }
-    });
-  }
-
-  /* Not extremely fast: static image only — do not load video */
-  function startStaticFirst() {
-    mode = "static";
-    staticImages = new Array(STATIC_PATHS.length);
-    preloadList(STATIC_PATHS, staticImages);
+          clearTimeout(timer);
+          mode = "high";
+          finishLoading();
+        }
+        img.onload = settled;
+        img.onerror = settled;
+        img.src = paths[idx];
+        images[idx] = img;
+      })(i);
+    }
   }
 
   function finishLoading() {
@@ -382,12 +335,6 @@
     }, 120);
   });
 
-  decideMode().then(function (chosen) {
-    sizeSpacer();
-    if (chosen === "video") {
-      startVideoFirst();
-    } else {
-      startStaticFirst();
-    }
-  });
+  sizeSpacer();
+  startParallelLoad();
 })();
