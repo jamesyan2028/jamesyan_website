@@ -88,9 +88,14 @@ img{ display: block; max-width: 100%; }
   color: var(--faint);
 }
 
-.site-nav a:hover,
 .site-nav a.is-active{
   color: var(--accent);
+}
+
+@media (hover: hover) and (pointer: fine){
+  .site-nav a:hover{
+    color: var(--accent);
+  }
 }
 
 /* Layout */
@@ -102,6 +107,10 @@ main{
 
 .section{
   padding-top: var(--s7);
+}
+
+.section.contact{
+  padding-bottom: var(--s6);
 }
 
 .section-title{
