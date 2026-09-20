@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>James Yan — Portfolio</title>
 <meta name="description" content="James Yan — junior at Brown University studying Computer Science and Applied Mathematics.">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#fafaf9">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,7 +25,7 @@
   </header>
 
   <main>
-    <section class="section hero" id="home">
+    <section class="section hero reveal" id="home">
       <div class="hero-row">
         <img class="hero-gif" src="dots_morph.gif" alt="" width="280" height="280">
         <div class="hero-copy">
@@ -47,10 +47,10 @@
       </div>
     </section>
 
-    <section class="section experience" id="experience">
+    <section class="section experience reveal" id="experience">
       <h2 class="section-title">Experience &amp; Projects</h2>
       <ul class="exp-list">
-        <li class="exp-row">
+        <li class="exp-card exp-card--work">
           <div class="exp-logo"><img src="logos/ibm.svg" alt=""></div>
           <div class="exp-body">
             <h3 class="exp-title">Software Engineer Intern</h3>
@@ -64,7 +64,7 @@
             </ul>
           </div>
         </li>
-        <li class="exp-row">
+        <li class="exp-card exp-card--work">
           <div class="exp-logo"><img src="logos/brown.png" alt=""></div>
           <div class="exp-body">
             <h3 class="exp-title">Student Researcher</h3>
@@ -78,7 +78,7 @@
             </ul>
           </div>
         </li>
-        <li class="exp-row">
+        <li class="exp-card exp-card--project">
           <div class="exp-logo"><img src="logos/ibm.svg" alt=""></div>
           <div class="exp-body">
             <h3 class="exp-title">Opal — LLM Inference Platform Simulator</h3>
@@ -95,7 +95,7 @@
             </ul>
           </div>
         </li>
-        <li class="exp-row">
+        <li class="exp-card exp-card--project">
           <div class="exp-logo"><img src="logos/snowcast.svg" alt=""></div>
           <div class="exp-body">
             <h3 class="exp-title">Snowcast — Audio Streaming Service</h3>
@@ -119,7 +119,7 @@
             </ul>
           </div>
         </li>
-        <li class="exp-row">
+        <li class="exp-card exp-card--project">
           <div class="exp-logo"><img src="logos/mapreduce.svg" alt=""></div>
           <div class="exp-body">
             <h3 class="exp-title">MapReduce Implementation</h3>
@@ -139,7 +139,7 @@
       </ul>
     </section>
 
-    <section class="section contact" id="contact">
+    <section class="section contact reveal" id="contact">
       <h2 class="section-title">Contact</h2>
       <p class="contact-lede">Always happy to connect! Currently seeking spring and summer 2027 opportunities.</p>
       <div class="contact-links">
